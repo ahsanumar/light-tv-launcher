@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="background">#0E1116</color>
+    <color name="card">#1C222B</color>
+    <color name="card_focused">#2B3442</color>
+    <color name="focus_ring">#E8EEF7</color>
+    <color name="text_primary">#E8EEF7</color>
+    <color name="text_secondary">#8A94A3</color>
+
+    <!-- Plain color window background: no wallpaper compositing, cheapest possible first frame -->
+    <style name="HomeTheme" parent="@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen">
+        <item name="android:windowBackground">@color/background</item>
+        <item name="android:windowShowWallpaper">false</item>
+        <item name="android:colorBackground">@color/background</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+</resources>

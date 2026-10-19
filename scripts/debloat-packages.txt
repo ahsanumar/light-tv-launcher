@@ -1,0 +1,40 @@
+# Packages disabled by scripts/debloat.sh on the TCL BeyondTV (RTD2851, Android 11).
+# Format: <package>  # <what it is / what you lose>
+# Comment a line out with a leading '#' to keep that package enabled.
+# Every package is disabled with `pm disable-user --user 0` (reversible), never uninstalled.
+#
+# Deliberately NOT listed (needed for core TV functions or known to cause boot/setup problems):
+#   com.tcl.tv, com.tcl.tvinput (Live TV / HDMI inputs), com.tcl.keycustomfunctionservice (remote buttons),
+#   com.tcl.dashboard (settings panel), com.tcl.systemserver, com.tcl.xian.StartandroidService (device auth),
+#   com.tcl.useragreement, com.google.android.tungsten.setupwraith (setup wizard), com.android.location.fused,
+#   com.google.android.gms / gsf / vending (Play Store), com.google.android.tv.remote.service (phone remote),
+#   com.google.android.apps.mediashell (Chromecast built-in), streaming apps you use.
+
+# --- Google ---
+com.google.android.katniss              # Google voice search & Assistant (~72 MB RAM). Remote mic button stops working.
+com.google.android.backdrop             # Ambient Mode screensaver (photos/weather)
+com.google.android.play.games           # Play Games
+com.google.android.feedback             # Google feedback reporter
+com.google.android.marvin.talkback      # TalkBack screen reader (re-enable if you need accessibility)
+
+# --- TCL telemetry, promos, account ---
+com.tcl.bi                              # TCL analytics/telemetry ("bi" = business intelligence)
+com.tcl.messagebox                      # TCL promo/notification messages
+com.tcl.overseasappshow                 # TCL app promotion
+com.tcl.waterfall.overseas              # TCL content "waterfall" recommendations
+com.tcl.usercenter                      # TCL account
+com.tcl.partnercustomizer               # Partner channels/rows for the stock Google launcher
+android.autoinstalls.config.tcl.device  # Play Auto Installs (pushes partner apps after updates)
+com.tcl.esticker                        # In-store demo sticker overlay
+com.tcl.notereminder                    # TCL note reminder
+com.tcl.copydatatotv                    # Copy-data-to-TV helper
+# com.tcl.guard, com.tcl.smartalexa: PERSISTENT system apps — Android starts them at boot even
+# when disabled, so disabling has no effect. Removing them would need root.
+
+# --- TCL features you may want (comment out to keep) ---
+com.tcl.MultiScreenInteraction_TV       # TCL phone app (T-Cast/TCL Home) control (~32 MB RAM). Google TV remote still works.
+com.tcl.versionUpdateApp                # TCL firmware updater (~39 MB RAM). Stops OTA updates; re-enable before updating.
+
+# --- Stock launcher (only disabled once Lite Launcher is the default home; the script checks) ---
+com.google.android.tvlauncher           # Stock Google/Android TV home screen (~65 MB RAM)
+com.google.android.tvrecommendations    # Recommendation rows for the stock home screen (~21 MB RAM)
