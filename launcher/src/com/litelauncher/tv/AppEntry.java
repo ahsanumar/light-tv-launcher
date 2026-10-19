@@ -17,6 +17,8 @@ final class AppEntry {
     /** Written once by the artwork loader thread, read on the main thread after a Handler post. */
     Drawable artwork;
     boolean artworkIsBanner;
+    /** Square app icon, used by the Google TV-style round "Your apps" row. */
+    Drawable icon;
 
     AppEntry(String label, String packageName, Intent launchIntent, ActivityInfo activityInfo,
              boolean isLeanbackApp, int launchCount) {

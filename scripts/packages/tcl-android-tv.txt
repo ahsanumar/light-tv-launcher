@@ -1,4 +1,4 @@
-# Packages disabled by scripts/debloat.sh on the TCL BeyondTV (RTD2851, Android 11).
+# Packages disabled by scripts/debloat.sh on TCL Android TV, tested on the TCL BeyondTV (RTD2851, Android 11).
 # Format: <package>  # <what it is / what you lose>
 # Comment a line out with a leading '#' to keep that package enabled.
 # Every package is disabled with `pm disable-user --user 0` (reversible), never uninstalled.

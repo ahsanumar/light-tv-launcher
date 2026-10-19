@@ -1,0 +1,39 @@
+# Packages disabled by scripts/debloat.sh on TCL Google TV models
+# (tested: board G07, Realtek RTD2851A, Android 11, Google TV launcher "launcherx").
+# Format: <package>  # <what it is / what you lose>
+# Comment a line out with a leading '#' to keep that package enabled.
+# Every package is disabled with `pm disable-user --user 0` (reversible), never uninstalled.
+#
+# This list keeps the Google TV home screen, search, voice and Ambient Mode exactly as they are.
+#
+# Deliberately NOT listed:
+#   com.google.android.apps.tv.launcherx (Google TV home), com.google.android.katniss (search/voice,
+#   the home screen depends on it), com.tcl.tv / com.tcl.tvinput (Live TV & HDMI inputs),
+#   com.tcl.settings (picture/sound settings), com.tcl.micmanager (remote mic),
+#   com.tcl.ttvs (runs as the system user; function unclear, too risky),
+#   com.tcl.guard (PERSISTENT: starts even when disabled), com.google.android.tungsten.setupwraith,
+#   com.google.android.gms / gsf / vending, streaming apps.
+
+# --- TCL extras (no effect on the home screen) ---
+# com.tcl.usercenter, com.tcl.notereminder: the firmware re-enables both ~40 s after every boot
+# (com.tcl.tv.tclhome_passive binds to the user center), so disabling them has no lasting effect.
+com.tcl.messagebox                          # TCL promo/notification messages
+com.tcl.waterfall.overseas                  # TCL content recommendations
+com.tcl.esticker                            # In-store demo sticker overlay
+com.tcl.hotelmenu                           # Hotel-mode configuration menu
+android.autoinstalls.config.google.gtvpai   # Play Auto Installs (pushes partner apps after updates)
+
+# --- Google extras ---
+com.google.android.feedback                 # Google feedback reporter
+com.google.android.marvin.talkback          # TalkBack screen reader (re-enable if you need accessibility)
+com.google.android.play.games               # Play Games
+
+# --- Optional: features some people use (uncomment to disable) ---
+# com.tcl.ui_mediaCenter                    # USB Media Player (~32 MB, runs all the time). Lose: playing files from USB drives
+# com.tcl.miracast                          # Screen mirroring (~6 MB). Lose: Miracast from phones/PCs (Chromecast still works)
+# com.tcl.MultiScreenInteraction_TV         # TCL phone app control. Lose: TCL Home/T-Cast app (Google TV app still works)
+# com.tcl.channelplus                       # TCL Channel (free streaming channels)
+# com.tcl.gallery                           # TCL photo gallery
+# com.iqiyi.i18n.tv                         # iQIYI (preinstalled)
+# com.mercadolibre.android.mplay_tv         # Mercado Play (preinstalled)
+# com.google.android.apps.tv.dreamx         # Ambient Mode screensaver + Google Home panel (~76 MB). CHANGES THE UI

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The always-highlighted "Home" tab marker -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/gtv_pill_selected" />
+    <corners android:radius="28dp" />
+</shape>

@@ -1,11 +1,19 @@
 #!/usr/bin/env bash
-# Reversibly debloat the TV and speed up UI animations. No root needed.
+# Reversibly debloat the TV and (optionally) speed up UI animations. No root needed.
 #
-# Usage: scripts/debloat.sh apply    disable packages in debloat-packages.txt + set animations to 0.5x
-#        scripts/debloat.sh undo     re-enable everything this script disabled + restore animation settings
-#        scripts/debloat.sh status   show the current state of every listed package
+# Usage: scripts/debloat.sh apply [--list FILE]... [--animations]
+#        scripts/debloat.sh undo
+#        scripts/debloat.sh status [--list FILE]...
 #
-# Every change is appended to state/debloat-applied.tsv (machine-readable, used by `undo`)
+#   apply         disable the packages in the package list(s)
+#   --list FILE   package list to use (repeatable); default is picked from the TV's home screen:
+#                 Google TV -> scripts/packages/tcl-google-tv.txt,
+#                 Android TV -> scripts/packages/tcl-android-tv.txt
+#   --animations  also set animation scales to 0.5x (snappier, but visibly changes the UI feel)
+#   undo          re-enable everything this script changed on this TV and restore settings
+#   status        show the current state of every listed package
+#
+# Changes are recorded per TV in state/<device>-<hash>.tsv (machine-readable, used by `undo`)
 # and DEBLOAT-LOG.md (human-readable, with the exact command to undo each change by hand).
 #
 # Env: TV_ADDR (default 192.168.0.101:5555)
@@ -15,14 +23,19 @@ TV_ADDR="${TV_ADDR:-192.168.0.101:5555}"
 ANIMATION_SCALE="0.5"
 ANIMATION_SETTINGS=(window_animation_scale transition_animation_scale animator_duration_scale)
 LITE_LAUNCHER_HOME="com.litelauncher.tv/.HomeActivity"
-# Disabling these without a replacement home screen leaves the TV on a black screen
-STOCK_LAUNCHER_PACKAGES=(com.google.android.tvlauncher com.google.android.tvrecommendations)
+GOOGLE_TV_LAUNCHER_PACKAGE="com.google.android.apps.tv.launcherx"
+# Packages that provide or feed the stock HOME screen. They are only disabled when Lite Launcher
+# is installed, and HOME is verified afterwards (auto rollback), so the TV never loses its home.
+# setupwraith is here because its RecoveryActivity claims HOME (priority 1) on Google TV.
+HOME_PROVIDER_PACKAGES=(com.google.android.tvlauncher com.google.android.tvrecommendations
+  "$GOOGLE_TV_LAUNCHER_PACKAGE" com.google.android.tungsten.setupwraith)
 
 project_dir="$(cd "$(dirname "$0")/.." && pwd)"
-package_list="$project_dir/scripts/debloat-packages.txt"
-state_file="$project_dir/state/debloat-applied.tsv"
 human_log="$project_dir/DEBLOAT-LOG.md"
-mkdir -p "$(dirname "$state_file")"
+package_lists=()
+should_set_animations=false
+state_file=""
+device_id=""
 
 # </dev/null: adb shell otherwise swallows the stdin of the `while read` loops below
 tv_shell() { adb -s "$TV_ADDR" shell "$@" </dev/null | tr -d '\r'; }
@@ -35,7 +48,35 @@ ensure_connected() {
   fi
 }
 
-listed_packages() { sed -e 's/#.*//' -e 's/[[:space:]]*$//' -e '/^[[:space:]]*$/d' "$package_list" | awk '{print $1}'; }
+# Identify the TV by model + a hash of its serial, so state files from different TVs never mix
+# (the IP isn't stable, and the raw serial number shouldn't end up in file names)
+resolve_device() {
+  local device_name serial_number
+  device_name="$(tv_shell getprop ro.product.device)"
+  serial_number="$(tv_shell getprop ro.boot.serialno)"
+  [[ -n "$device_name" && -n "$serial_number" ]] || { echo "ERROR: could not read device id from TV" >&2; exit 1; }
+  device_id="$device_name-$(printf %s "$serial_number" | shasum | cut -c1-8)"
+  state_file="$project_dir/state/$device_id.tsv"
+  mkdir -p "$(dirname "$state_file")"
+}
+
+resolve_package_lists() {
+  if (( ${#package_lists[@]} == 0 )); then
+    if tv_shell pm list packages | grep -qx "package:$GOOGLE_TV_LAUNCHER_PACKAGE"; then
+      package_lists=("$project_dir/scripts/packages/tcl-google-tv.txt")
+    else
+      package_lists=("$project_dir/scripts/packages/tcl-android-tv.txt")
+    fi
+  fi
+  local list_file
+  for list_file in "${package_lists[@]}"; do
+    [[ -f "$list_file" ]] || { echo "ERROR: package list not found: $list_file" >&2; exit 1; }
+    echo "TV: $device_id ($TV_ADDR)   list: ${list_file#"$project_dir"/}"
+  done
+  echo ""
+}
+
+listed_packages() { sed -e 's/#.*//' -e 's/[[:space:]]*$//' -e '/^[[:space:]]*$/d' "${package_lists[@]}" | awk '{print $1}'; }
 
 package_state() {
   local package_name="$1"
@@ -45,9 +86,9 @@ package_state() {
   fi
 }
 
-is_stock_launcher_package() {
+is_home_provider_package() {
   local package_name="$1" stock_package
-  for stock_package in "${STOCK_LAUNCHER_PACKAGES[@]}"; do
+  for stock_package in "${HOME_PROVIDER_PACKAGES[@]}"; do
     [[ "$package_name" == "$stock_package" ]] && return 0
   done
   return 1
@@ -64,7 +105,7 @@ lite_launcher_installed() {
 # Called after the stock launcher is disabled: if HOME doesn't land on Lite Launcher,
 # put the stock launcher back immediately rather than leave the TV without a home screen
 verify_home_or_roll_back() {
-  local disabled_stock_packages=("$@") home_activity package_name
+  local disabled_home_providers=("$@") home_activity package_name
   home_activity="$(current_home)"
   if [[ "$home_activity" == "$LITE_LAUNCHER_HOME" ]]; then
     tv_shell input keyevent KEYCODE_HOME
@@ -72,7 +113,7 @@ verify_home_or_roll_back() {
     return 0
   fi
   echo "ERROR: HOME resolves to '$home_activity' after disabling the stock launcher; rolling back" >&2
-  for package_name in "${disabled_stock_packages[@]}"; do
+  for package_name in "${disabled_home_providers[@]}"; do
     tv_shell pm enable "$package_name" >/dev/null
     printf '%s\tpackage-rolled-back\t%s\tenabled\n' "$(now)" "$package_name" >> "$state_file"
     echo "| Rolled back \`$package_name\` (HOME did not resolve to Lite Launcher) | — |" >> "$human_log"
@@ -83,17 +124,17 @@ verify_home_or_roll_back() {
 
 apply_changes() {
   local changed_count=0 skipped_count=0
-  local disabled_stock_packages=()
+  local disabled_home_providers=()
   {
     echo ""
-    echo "## Apply — $(now)"
+    echo "## Apply — $(now) — $device_id"
     echo ""
     echo "| Change | Undo command |"
     echo "|---|---|"
   } >> "$human_log"
 
   while read -r package_name; do
-    if is_stock_launcher_package "$package_name" && ! lite_launcher_installed; then
+    if is_home_provider_package "$package_name" && ! lite_launcher_installed; then
       echo "SKIP  $package_name (Lite Launcher not installed — run scripts/build.sh --install first)"
       skipped_count=$((skipped_count + 1))
       continue
@@ -110,18 +151,19 @@ apply_changes() {
       echo "| Disabled \`$package_name\` | \`adb shell pm enable $package_name\` |" >> "$human_log"
       echo "OFF   $package_name"
       changed_count=$((changed_count + 1))
-      is_stock_launcher_package "$package_name" && disabled_stock_packages+=("$package_name")
+      is_home_provider_package "$package_name" && disabled_home_providers+=("$package_name")
     else
       echo "FAIL  $package_name (pm disable-user did not report disabled-user)" >&2
     fi
   done < <(listed_packages)
 
-  if (( ${#disabled_stock_packages[@]} > 0 )); then
-    verify_home_or_roll_back "${disabled_stock_packages[@]}" || true
+  if (( ${#disabled_home_providers[@]} > 0 )); then
+    verify_home_or_roll_back "${disabled_home_providers[@]}" || true
   fi
 
   local setting_name previous_value
   for setting_name in "${ANIMATION_SETTINGS[@]}"; do
+    [[ "$should_set_animations" == true ]] || break
     previous_value="$(tv_shell settings get global "$setting_name")"
     [[ "$previous_value" == "$ANIMATION_SCALE" ]] && continue
     tv_shell settings put global "$setting_name" "$ANIMATION_SCALE"
@@ -146,7 +188,7 @@ undo_changes() {
   fi
   {
     echo ""
-    echo "## Undo — $(now)"
+    echo "## Undo — $(now) — $device_id"
     echo ""
   } >> "$human_log"
 
@@ -199,10 +241,21 @@ show_status() {
   done
 }
 
+command_name="${1:-}"
+shift || true
+while (( $# > 0 )); do
+  case "$1" in
+    --list)       package_lists+=("${2:?--list needs a file}"); shift 2 ;;
+    --animations) should_set_animations=true; shift ;;
+    *) echo "Unknown option: $1" >&2; exit 2 ;;
+  esac
+done
+
 ensure_connected
-case "${1:-}" in
-  apply)  apply_changes ;;
+resolve_device
+case "$command_name" in
+  apply)  resolve_package_lists; apply_changes ;;
   undo)   undo_changes ;;
-  status) show_status ;;
-  *) echo "Usage: $0 apply|undo|status" >&2; exit 2 ;;
+  status) resolve_package_lists; show_status ;;
+  *) echo "Usage: $0 apply [--list FILE]... [--animations] | undo | status [--list FILE]..." >&2; exit 2 ;;
 esac

@@ -97,6 +97,7 @@ final class AppListLoader {
 
     /** Slow (decodes images); call from a background thread. */
     static void loadArtwork(PackageManager packageManager, AppEntry entry) {
+        entry.icon = entry.activityInfo.loadIcon(packageManager);
         if (entry.isLeanbackApp) {
             Drawable banner = entry.activityInfo.loadBanner(packageManager);
             if (banner != null) {
@@ -105,7 +106,7 @@ final class AppListLoader {
                 return;
             }
         }
-        entry.artwork = entry.activityInfo.loadIcon(packageManager);
+        entry.artwork = entry.icon;
         entry.artworkIsBanner = false;
     }
 }

@@ -114,6 +114,8 @@ final class AppGridAdapter extends BaseAdapter {
         TileViews(View tileView) {
             banner = tileView.findViewById(R.id.app_banner);
             label = tileView.findViewById(R.id.app_label);
+            // android:clipToOutline in XML is API 31+; set it in code for rounded corners on API 28-30
+            banner.setClipToOutline(true);
         }
     }
 }

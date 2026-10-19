@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Google TV-style home: top bar, a "Your apps" row of round icons, then all apps as banners -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/gtv_scroll"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/gtv_background"
+    android:fillViewport="true"
+    android:scrollbars="none">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:orientation="vertical"
+        android:paddingStart="58dp"
+        android:paddingTop="32dp"
+        android:paddingEnd="58dp"
+        android:paddingBottom="48dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/gtv_pill_container"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="4dp">
+
+                <ImageView
+                    android:id="@+id/gtv_search_button"
+                    style="@style/GtvTopBarIconButton"
+                    android:contentDescription="@string/gtv_search"
+                    android:src="@drawable/ic_gtv_search" />
+
+                <TextView
+                    style="@style/GtvTopBarTab"
+                    android:background="@drawable/gtv_pill_static_selected"
+                    android:focusable="false"
+                    android:text="@string/gtv_home"
+                    android:textColor="@color/gtv_text_on_pill" />
+
+                <TextView
+                    android:id="@+id/gtv_apps_tab"
+                    style="@style/GtvTopBarTab"
+                    android:background="@drawable/gtv_pill_button"
+                    android:focusable="true"
+                    android:text="@string/gtv_apps"
+                    android:textColor="@color/gtv_on_pill_tint" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:background="@drawable/gtv_pill_container"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="4dp">
+
+                <ImageView
+                    android:id="@+id/gtv_inputs_button"
+                    style="@style/GtvTopBarIconButton"
+                    android:contentDescription="@string/gtv_inputs"
+                    android:src="@drawable/ic_gtv_input" />
+
+                <ImageView
+                    android:id="@+id/gtv_settings_button"
+                    style="@style/GtvTopBarIconButton"
+                    android:contentDescription="@string/settings_label"
+                    android:src="@drawable/ic_gtv_settings" />
+            </LinearLayout>
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <TextClock
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:format12Hour="h:mm"
+                android:format24Hour="HH:mm"
+                android:textColor="@color/gtv_text_secondary"
+                android:textSize="30sp" />
+        </LinearLayout>
+
+        <TextView
+            style="@style/GtvSectionTitle"
+            android:text="@string/gtv_your_apps" />
+
+        <!-- clipChildren=false so focused tiles can scale up past the row bounds -->
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:paddingTop="8dp"
+            android:paddingBottom="4dp"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:id="@+id/gtv_your_apps_row"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:clipChildren="false"
+                android:orientation="horizontal" />
+        </HorizontalScrollView>
+
+        <TextView
+            android:id="@+id/gtv_all_apps_title"
+            style="@style/GtvSectionTitle"
+            android:text="@string/gtv_all_apps" />
+
+        <LinearLayout
+            android:id="@+id/gtv_all_apps_grid"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clipChildren="false"
+            android:orientation="vertical"
+            android:paddingTop="8dp" />
+    </LinearLayout>
+</ScrollView>

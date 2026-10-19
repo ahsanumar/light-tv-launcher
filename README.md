@@ -1,11 +1,24 @@
 # TCL TV Lite Launcher
 
-A tiny, dependency-free Android TV home screen plus a reversible debloat script for a
-TCL BeyondTV (Realtek RTD2851, 2 GB RAM, Android 11). The goal is more free RAM and
-snappier navigation on slow TV hardware, without rooting or flashing anything.
+A tiny, dependency-free Android TV home screen plus reversible debloat scripts for TCL TVs
+with 2 GB of RAM. The goal is more free RAM and snappier navigation on slow TV hardware,
+without rooting or flashing anything.
 
-Measured on the TCL BeyondTV after a fresh reboot: home screen cold start 1,351 → 600 ms
-(−56%), home screen memory 86 → 18 MB, app launches 13–15% faster.
+The launcher picks its layout from the TV it runs on:
+
+- **Android TV models** get a compact grid of app banners, most-used first.
+- **Google TV models** get a Google TV-style layout: a pill top bar (Search, Home/Apps,
+  Inputs, Settings, clock), a "Your apps" row of round icons, and all apps as banners.
+
+Measured after a fresh reboot, each compared with the stock setup:
+
+| | TCL BeyondTV (Android TV) | TCL G07 (Google TV) |
+|---|---|---|
+| Home screen memory (PSS) | 86 → 18 MB | 136 → 54 MB (plus ~150 MB of Google TV background services gone) |
+| Home screen cold start | 1,351 → 600 ms (−56%) | 602 → 484 ms (−20%) |
+| Available RAM after boot | no clear change | 781 → 907 MB (+16%) |
+| Cold boot | 42.3 → 41.6 s | 28.2 → 22.5 s (−20%) |
+| App cold starts | 13–15% faster | unchanged (YouTube 828 → 813 ms) |
 
 ## TV support
 
@@ -17,7 +30,8 @@ so they are the part most likely to need changes on other TVs.
 |---|---|---|---|---|
 | TCL BeyondTV platform (Realtek RTD2851; `ro.product.model` reports `BeyondTV`) | 9–11 | ✅ Works | ✅ Works | **Tested** on Android 11 |
 | Other TCL Android TV models (non-Google TV UI) | 9–11 | 🟡 Should work | 🟡 Partly. Missing packages are skipped; TCL package names vary by firmware | Untested |
-| TCL Google TV models (newer UI) | 10+ | 🟡 Should work | ❌ Stock launcher is a different package (`com.google.android.apps.tv.launcherx`), so HOME won't switch | Untested |
+| TCL Google TV (board G07, Realtek RTD2851A, 2022) | 11 | ✅ Works (Google TV-style layout) | ✅ Works: `tcl-google-tv.txt` (keeps Google TV UI) or plus `google-tv-home-swap.txt` (replaces it) | **Tested** on Android 11. Debloat alone: gain within noise. With the home swap: see table above |
+| Other TCL Google TV models | 10+ | 🟡 Should work | 🟡 `tcl-google-tv.txt` likely applies; missing packages are skipped | Untested |
 | Other Android TV brands (Sony, Philips, Hisense, Sharp, Xiaomi, Nvidia Shield, Chromecast with Google TV) | 9+ | 🟡 Should work | ❌ Package list is TCL-specific; build your own list | Untested |
 | Amazon Fire TV (Fire OS) | — | ❓ Unknown | ❌ | Untested; Fire OS restricts replacing the home screen |
 | Android TV 8.x and older | ≤ 8 | ❌ Not supported (`minSdk` 28) | ❌ | — |
@@ -33,9 +47,10 @@ adb shell getprop ro.build.version.release
 adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME
 ```
 
-The last command shows your current home screen. If it isn't `com.google.android.tvlauncher`,
-add your stock launcher's package to `STOCK_LAUNCHER_PACKAGES` in `scripts/debloat.sh` and to
-`scripts/debloat-packages.txt`.
+The last command shows your current home screen. `debloat.sh` picks the package list from it:
+`com.google.android.apps.tv.launcherx` (Google TV) uses `scripts/packages/tcl-google-tv.txt`,
+anything else uses `scripts/packages/tcl-android-tv.txt`. For another brand, copy a list, edit it,
+and pass it with `--list`.
 
 ## Why not a custom ROM?
 
@@ -48,10 +63,12 @@ Disabling bloat over ADB gets most of the benefit with none of the brick risk.
 
 | Path | What it does |
 |---|---|
-| `launcher/` | Lite Launcher source: plain Android framework (no AndroidX/Kotlin/Compose), ~28 KB APK |
+| `launcher/` | Lite Launcher source: plain Android framework (no AndroidX/Kotlin/Compose), ~44 KB APK |
 | `scripts/build.sh` | Builds the APK with `aapt2` + `javac` + `d8` (no Gradle). `--install` installs it and requests the HOME role |
-| `scripts/debloat.sh` | `apply` / `undo` / `status` — disables packages in `debloat-packages.txt`, sets animations to 0.5× |
-| `scripts/debloat-packages.txt` | The package list, one line per package with what you lose. Comment a line out to keep it |
+| `scripts/debloat.sh` | `apply` / `undo` / `status` — disables the packages in a list; `--animations` also sets animations to 0.5× |
+| `scripts/packages/tcl-android-tv.txt` | Package list for TCL Android TV (also swaps out the stock launcher for Lite Launcher) |
+| `scripts/packages/tcl-google-tv.txt` | Package list for TCL Google TV; keeps the Google TV home screen untouched. Optional extras are commented out |
+| `scripts/packages/google-tv-home-swap.txt` | Add-on list for Google TV: disables the Google TV launcher and setup app so Lite Launcher becomes home |
 | `scripts/measure.sh` | Measures cold boot, free RAM, process count and app cold-start times into `measurements/` |
 | `scripts/compare.sh` | Prints a before/after table from two `measurements/` files |
 
@@ -61,7 +78,7 @@ Generated per TV and git-ignored (they list your installed apps, screenshots and
 |---|---|
 | `measurements/` | Measurement results, process lists, screenshots |
 | `DEBLOAT-LOG.md` | Human-readable log of every change, with the exact undo command for each |
-| `state/debloat-applied.tsv` | Machine-readable change log used by `debloat.sh undo` — keep it, or undo can't run |
+| `state/<device>-<hash>.tsv` | Per-TV change log used by `debloat.sh undo` — keep it, or undo can't run |
 
 ## Requirements
 
@@ -77,16 +94,37 @@ Override paths/addresses with `TV_ADDR`, `ANDROID_SDK`, `JAVA_HOME`.
 adb connect 192.168.0.101:5555
 scripts/measure.sh before --reboot      # baseline (reboots the TV, ~7 min)
 scripts/build.sh --install              # build, install, set Lite Launcher as home
-scripts/debloat.sh apply                # disable bloat + 0.5x animations
+scripts/debloat.sh apply --animations   # disable bloat + 0.5x animations
 scripts/measure.sh after --reboot       # compare with measurements/before.txt
 ```
+
+Google TV, debloat only (keeps the Google TV home screen and animations):
+
+```bash
+export TV_ADDR=192.168.0.189:5555
+scripts/debloat.sh status    # shows which list it picked
+scripts/debloat.sh apply
+```
+
+Google TV, replace the home screen with the Google TV-style Lite Launcher:
+
+```bash
+export TV_ADDR=192.168.0.189:5555
+scripts/build.sh --install
+scripts/debloat.sh apply --list scripts/packages/tcl-google-tv.txt \
+                         --list scripts/packages/google-tv-home-swap.txt --animations
+```
+
+What you lose with the Google TV swap: content rows (YouTube/Netflix rows, Continue watching,
+"For you"), profiles, and the Google setup wizard. Reading other apps' content rows needs
+`ACCESS_ALL_EPG_DATA`, a `signature|privileged` permission no third-party launcher can hold.
+Search (Google Assistant), Settings, Accounts, Inputs and all apps keep working.
 
 ## Undo
 
 ```bash
-scripts/debloat.sh undo                                     # re-enable everything, restore animations
-adb shell cmd package set-home-activity com.google.android.tvlauncher/.MainActivity
-adb uninstall com.litelauncher.tv                           # optional: remove Lite Launcher
+scripts/debloat.sh undo              # re-enable everything on this TV (incl. the stock home), restore animations
+adb uninstall com.litelauncher.tv     # optional: remove Lite Launcher
 ```
 
 Nothing here modifies system partitions — packages are only disabled for user 0. If the TV ever
@@ -98,8 +136,13 @@ re-enables every disabled package.
 The stock launcher's HOME intent filter declares `priority=2`. When HOME candidates have
 different priorities Android picks the highest one and never consults the user's preferred
 home, and third-party apps can't declare a priority above 0. So `set-home-activity` / the HOME
-role alone aren't enough: `debloat.sh apply` disables `com.google.android.tvlauncher`, then
-verifies HOME resolves to Lite Launcher and automatically re-enables the stock launcher if not.
+role alone aren't enough: `debloat.sh apply` disables the stock launcher, then verifies HOME
+resolves to Lite Launcher and automatically re-enables the stock launcher if not.
+
+Google TV adds a second obstacle: Google's setup app (`setupwraith`) has a `RecoveryActivity`
+with HOME `priority=1` that takes over when the launcher is missing. ADB can't disable a single
+component of a system app ("Shell cannot change component state"), so the whole setup app is
+disabled by `google-tv-home-swap.txt`. Tested: HOME stays on Lite Launcher across reboots.
 
 ## Launcher controls
 
@@ -108,6 +151,8 @@ verifies HOME resolves to Lite Launcher and automatically re-enables the stock l
 - Tiles are sorted by how often you open them, then alphabetically (re-sorted when apps change)
 - TCL's factory service menu, setup wizards and other internal entries are hidden
   (`HIDDEN_PACKAGES` in `AppListLoader.java`)
+- Google TV layout: Search opens Google Assistant search, the inputs button opens TCL's TV/HDMI
+  app, the gear opens Settings, "Apps" jumps to the all-apps grid. App names show on focus
 
 ## Notes
 

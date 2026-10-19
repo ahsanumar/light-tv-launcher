@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Google TV-style theme: warm near-black background, light pills on focus -->
+    <color name="gtv_background_top">#2A2219</color>
+    <color name="gtv_background_middle">#17140F</color>
+    <color name="gtv_background_bottom">#101010</color>
+    <color name="gtv_pill_container">#33FFFFFF</color>
+    <color name="gtv_pill_selected">#E8EAED</color>
+    <color name="gtv_text_on_pill">#1F1F1F</color>
+    <color name="gtv_text_primary">#E8EAED</color>
+    <color name="gtv_text_secondary">#BDC1C6</color>
+    <color name="gtv_round_icon_background">#EDEFF2</color>
+    <color name="gtv_banner_background">#2B2B2B</color>
+    <color name="gtv_focus_ring">#FFFFFF</color>
+</resources>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Icon/text color for top-bar buttons: dark on the focused light pill, light otherwise -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/gtv_text_on_pill" android:state_focused="true" />
+    <item android:color="@color/gtv_text_primary" />
+</selector>
