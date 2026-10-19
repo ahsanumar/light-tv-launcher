@@ -1,4 +1,4 @@
-# Makes Lite Launcher the home screen on Google TV. Use together with the debloat list:
+# Makes Light TV Launcher the home screen on Google TV. Use together with the debloat list:
 #   scripts/debloat.sh apply --list scripts/packages/tcl-google-tv.txt --list scripts/packages/google-tv-home-swap.txt
 #
 # Why both packages: Android picks the HOME activity with the highest intent-filter priority and
@@ -6,7 +6,7 @@
 #   - Google TV launcher:          priority 2
 #   - Google setup RecoveryActivity: priority 1 (takes HOME if the launcher is missing)
 # ADB can't disable a single component of a system app ("Shell cannot change component state"),
-# so the whole setup app has to be disabled. debloat.sh checks HOME lands on Lite Launcher
+# so the whole setup app has to be disabled. debloat.sh checks HOME lands on Light TV Launcher
 # afterwards and re-enables both automatically if it doesn't.
 #
 # Lose: Google TV home (content rows, Continue watching, profiles), and the Google setup wizard

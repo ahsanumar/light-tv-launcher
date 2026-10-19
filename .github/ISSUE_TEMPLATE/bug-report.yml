@@ -1,0 +1,43 @@
+name: Bug report
+description: Something in the launcher or scripts doesn't work
+labels: ["bug"]
+body:
+  - type: input
+    id: tv
+    attributes:
+      label: TV brand, model and Android version
+      placeholder: "TCL 55C635, Android 11"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where
+      options:
+        - Launcher (Android TV grid layout)
+        - Launcher (Google TV-style layout)
+        - debloat.sh
+        - measure.sh / compare.sh
+        - build.sh
+        - tv-info.sh
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        Script output, or for launcher crashes:
+        `adb logcat -d | grep -E "LiteLauncher|FATAL|AndroidRuntime" | tail -50`
+        Check for and remove anything personal (emails, account names) before posting.
+      render: shell

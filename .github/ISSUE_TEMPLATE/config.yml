@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: How to add a new TV
+    url: https://github.com/ahsanumar/light-tv-launcher/blob/main/CONTRIBUTING.md#adding-support-for-a-new-tv
+    about: Step-by-step guide for reporting a TV and writing a package list

@@ -1,4 +1,4 @@
-# Packages disabled by scripts/debloat.sh on TCL Android TV, tested on the TCL BeyondTV (RTD2851, Android 11).
+# Packages disabled by scripts/debloat.sh on TCL Android TV (brand "tcl", UI "android-tv"), tested on the TCL BeyondTV (RTD2851, Android 11).
 # Format: <package>  # <what it is / what you lose>
 # Comment a line out with a leading '#' to keep that package enabled.
 # Every package is disabled with `pm disable-user --user 0` (reversible), never uninstalled.
@@ -35,6 +35,6 @@ com.tcl.copydatatotv                    # Copy-data-to-TV helper
 com.tcl.MultiScreenInteraction_TV       # TCL phone app (T-Cast/TCL Home) control (~32 MB RAM). Google TV remote still works.
 com.tcl.versionUpdateApp                # TCL firmware updater (~39 MB RAM). Stops OTA updates; re-enable before updating.
 
-# --- Stock launcher (only disabled once Lite Launcher is the default home; the script checks) ---
+# --- Stock launcher (only disabled once Light TV Launcher is the default home; the script checks) ---
 com.google.android.tvlauncher           # Stock Google/Android TV home screen (~65 MB RAM)
 com.google.android.tvrecommendations    # Recommendation rows for the stock home screen (~21 MB RAM)

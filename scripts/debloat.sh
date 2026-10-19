@@ -6,9 +6,9 @@
 #        scripts/debloat.sh status [--list FILE]...
 #
 #   apply         disable the packages in the package list(s)
-#   --list FILE   package list to use (repeatable); default is picked from the TV's home screen:
-#                 Google TV -> scripts/packages/tcl-google-tv.txt,
-#                 Android TV -> scripts/packages/tcl-android-tv.txt
+#   --list FILE   package list to use (repeatable). Default: scripts/packages/<brand>-<ui>.txt,
+#                 where <brand> is the TV's ro.product.brand (lowercase) and <ui> is
+#                 google-tv or android-tv (e.g. tcl-google-tv.txt). See CONTRIBUTING.md to add one.
 #   --animations  also set animation scales to 0.5x (snappier, but visibly changes the UI feel)
 #   undo          re-enable everything this script changed on this TV and restore settings
 #   status        show the current state of every listed package
@@ -16,15 +16,14 @@
 # Changes are recorded per TV in state/<device>-<hash>.tsv (machine-readable, used by `undo`)
 # and DEBLOAT-LOG.md (human-readable, with the exact command to undo each change by hand).
 #
-# Env: TV_ADDR (default 192.168.0.101:5555)
+# Env: TV_ADDR (optional when exactly one TV is connected to adb)
 set -euo pipefail
 
-TV_ADDR="${TV_ADDR:-192.168.0.101:5555}"
 ANIMATION_SCALE="0.5"
 ANIMATION_SETTINGS=(window_animation_scale transition_animation_scale animator_duration_scale)
 LITE_LAUNCHER_HOME="com.litelauncher.tv/.HomeActivity"
 GOOGLE_TV_LAUNCHER_PACKAGE="com.google.android.apps.tv.launcherx"
-# Packages that provide or feed the stock HOME screen. They are only disabled when Lite Launcher
+# Packages that provide or feed the stock HOME screen. They are only disabled when Light TV Launcher
 # is installed, and HOME is verified afterwards (auto rollback), so the TV never loses its home.
 # setupwraith is here because its RecoveryActivity claims HOME (priority 1) on Google TV.
 HOME_PROVIDER_PACKAGES=(com.google.android.tvlauncher com.google.android.tvrecommendations
@@ -37,16 +36,10 @@ should_set_animations=false
 state_file=""
 device_id=""
 
-# </dev/null: adb shell otherwise swallows the stdin of the `while read` loops below
-tv_shell() { adb -s "$TV_ADDR" shell "$@" </dev/null | tr -d '\r'; }
+# shellcheck source=lib/tv.sh
+source "$(dirname "$0")/lib/tv.sh"
 now() { date '+%Y-%m-%d %H:%M:%S'; }
 
-ensure_connected() {
-  if ! adb -s "$TV_ADDR" get-state >/dev/null 2>&1; then
-    adb connect "$TV_ADDR" >/dev/null 2>&1 || true
-    adb -s "$TV_ADDR" get-state >/dev/null 2>&1 || { echo "ERROR: cannot reach TV at $TV_ADDR" >&2; exit 1; }
-  fi
-}
 
 # Identify the TV by model + a hash of its serial, so state files from different TVs never mix
 # (the IP isn't stable, and the raw serial number shouldn't end up in file names)
@@ -62,11 +55,22 @@ resolve_device() {
 
 resolve_package_lists() {
   if (( ${#package_lists[@]} == 0 )); then
+    local brand_name ui_type default_list
+    brand_name="$(tv_shell getprop ro.product.brand | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9\n' '-')"
     if tv_shell pm list packages | grep -qx "package:$GOOGLE_TV_LAUNCHER_PACKAGE"; then
-      package_lists=("$project_dir/scripts/packages/tcl-google-tv.txt")
+      ui_type="google-tv"
     else
-      package_lists=("$project_dir/scripts/packages/tcl-android-tv.txt")
+      ui_type="android-tv"
     fi
+    default_list="$project_dir/scripts/packages/$brand_name-$ui_type.txt"
+    if [[ ! -f "$default_list" ]]; then
+      echo "ERROR: no package list for this TV yet (looked for scripts/packages/$brand_name-$ui_type.txt)." >&2
+      echo "Available lists:" >&2
+      ls "$project_dir/scripts/packages/" | sed 's/^/  /' >&2
+      echo "Pass one with --list, or add a list for your TV: see CONTRIBUTING.md" >&2
+      exit 1
+    fi
+    package_lists=("$default_list")
   fi
   local list_file
   for list_file in "${package_lists[@]}"; do
@@ -102,21 +106,21 @@ lite_launcher_installed() {
   tv_shell pm list packages -e | grep -qx "package:${LITE_LAUNCHER_HOME%%/*}"
 }
 
-# Called after the stock launcher is disabled: if HOME doesn't land on Lite Launcher,
+# Called after the stock launcher is disabled: if HOME doesn't land on Light TV Launcher,
 # put the stock launcher back immediately rather than leave the TV without a home screen
 verify_home_or_roll_back() {
   local disabled_home_providers=("$@") home_activity package_name
   home_activity="$(current_home)"
   if [[ "$home_activity" == "$LITE_LAUNCHER_HOME" ]]; then
     tv_shell input keyevent KEYCODE_HOME
-    echo "OK    HOME now opens Lite Launcher"
+    echo "OK    HOME now opens Light TV Launcher"
     return 0
   fi
   echo "ERROR: HOME resolves to '$home_activity' after disabling the stock launcher; rolling back" >&2
   for package_name in "${disabled_home_providers[@]}"; do
     tv_shell pm enable "$package_name" >/dev/null
     printf '%s\tpackage-rolled-back\t%s\tenabled\n' "$(now)" "$package_name" >> "$state_file"
-    echo "| Rolled back \`$package_name\` (HOME did not resolve to Lite Launcher) | — |" >> "$human_log"
+    echo "| Rolled back \`$package_name\` (HOME did not resolve to Light TV Launcher) | — |" >> "$human_log"
     echo "ON    $package_name (rolled back)"
   done
   return 1
@@ -135,7 +139,7 @@ apply_changes() {
 
   while read -r package_name; do
     if is_home_provider_package "$package_name" && ! lite_launcher_installed; then
-      echo "SKIP  $package_name (Lite Launcher not installed — run scripts/build.sh --install first)"
+      echo "SKIP  $package_name (Light TV Launcher not installed — run scripts/build.sh --install first)"
       skipped_count=$((skipped_count + 1))
       continue
     fi
@@ -251,7 +255,7 @@ while (( $# > 0 )); do
   esac
 done
 
-ensure_connected
+resolve_tv_addr
 resolve_device
 case "$command_name" in
   apply)  resolve_package_lists; apply_changes ;;

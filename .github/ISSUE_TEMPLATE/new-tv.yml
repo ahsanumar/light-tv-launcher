@@ -1,0 +1,45 @@
+name: New TV support
+description: Report a TV you've tried (or want supported), with the output of scripts/tv-info.sh
+title: "[TV] <brand> <model>"
+labels: ["new tv"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks! Run `scripts/tv-info.sh` with your TV connected over ADB and paste the output below.
+        It leaves out serial numbers, network details, accounts and apps you installed yourself.
+  - type: input
+    id: model
+    attributes:
+      label: TV brand and model
+      description: As printed on the TV or box, e.g. "TCL 55C635"
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: tv-info.sh report
+      description: Paste the full output of `scripts/tv-info.sh`
+      render: markdown
+    validations:
+      required: true
+  - type: checkboxes
+    id: tried
+    attributes:
+      label: What did you try?
+      options:
+        - label: Installed Light TV Launcher (`scripts/build.sh --install`)
+        - label: Light TV Launcher became the home screen
+        - label: Ran a package list (`scripts/debloat.sh apply`)
+        - label: Rebooted and checked packages stayed disabled (`scripts/debloat.sh status`)
+        - label: "`scripts/debloat.sh undo` restored everything"
+  - type: textarea
+    id: results
+    attributes:
+      label: Results
+      description: What worked, what didn't, and before/after numbers from `scripts/compare.sh` if you measured
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+      description: Firmware quirks, packages that got re-enabled at boot, features that broke

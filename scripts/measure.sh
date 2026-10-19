@@ -5,10 +5,9 @@
 #   <label>    name for this run, e.g. "before" or "after"; results go to measurements/<label>.txt
 #   --reboot   reboot the TV first and record cold boot time (recommended for fair comparisons)
 #
-# Env: TV_ADDR (default 192.168.0.101:5555)
+# Env: TV_ADDR (optional when exactly one TV is connected to adb)
 set -euo pipefail
 
-TV_ADDR="${TV_ADDR:-192.168.0.101:5555}"
 SETTLE_SECONDS="${SETTLE_SECONDS:-180}"   # background services keep starting for a few minutes after boot
 LAUNCH_RUNS=3
 LAUNCH_PACKAGES=(com.android.tv.settings com.google.android.youtube.tv org.courville.nova)
@@ -19,7 +18,8 @@ should_reboot="${2:-}"
 output_file="$project_dir/measurements/$label.txt"
 mkdir -p "$project_dir/measurements"
 
-tv_shell() { adb -s "$TV_ADDR" shell "$@" | tr -d '\r'; }
+# shellcheck source=lib/tv.sh
+source "$(dirname "$0")/lib/tv.sh"
 log() { echo "[$(date +%H:%M:%S)] $*" >&2; }
 record() { echo "$1=$2" | tee -a "$output_file"; }
 
@@ -38,9 +38,7 @@ wait_for_boot() {
   exit 1
 }
 
-if ! adb -s "$TV_ADDR" get-state >/dev/null 2>&1; then
-  adb connect "$TV_ADDR" >/dev/null || { echo "ERROR: cannot connect to $TV_ADDR" >&2; exit 1; }
-fi
+resolve_tv_addr
 
 : > "$output_file"
 record label "$label"

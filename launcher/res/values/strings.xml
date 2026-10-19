@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Lite Launcher</string>
+    <string name="app_name">Light TV Launcher</string>
     <string name="settings_label">Settings</string>
     <string name="launch_failed">Could not open %1$s</string>
     <string name="gtv_search">Search</string>

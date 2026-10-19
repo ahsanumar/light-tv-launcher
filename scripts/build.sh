@@ -7,14 +7,13 @@
 #   --install   install on the TV and make it the default home screen
 #
 # Env: ANDROID_SDK (default: Homebrew android-commandlinetools), JAVA_HOME (default: Homebrew openjdk@17),
-#      TV_ADDR (default 192.168.0.101:5555)
+#      TV_ADDR (optional when exactly one TV is connected to adb)
 set -euo pipefail
 
 ANDROID_SDK="${ANDROID_SDK:-/opt/homebrew/share/android-commandlinetools}"
 JAVA_HOME="${JAVA_HOME:-/opt/homebrew/opt/openjdk@17}"
 BUILD_TOOLS_VERSION="${BUILD_TOOLS_VERSION:-36.0.0}"
 PLATFORM_VERSION="${PLATFORM_VERSION:-android-36}"
-TV_ADDR="${TV_ADDR:-192.168.0.101:5555}"
 MIN_SDK=28           # TV's first_api_level; Android 9
 TARGET_SDK=30        # TV runs Android 11
 PACKAGE_NAME="com.litelauncher.tv"
@@ -65,23 +64,26 @@ if [[ ! -f "$keystore" ]]; then
 fi
 "$build_tools/zipalign" -f -p 4 "$build_dir/unsigned.apk" "$build_dir/aligned.apk"
 "$build_tools/apksigner" sign --ks "$keystore" --ks-pass pass:android --key-pass pass:android \
-  --out "$build_dir/lite-launcher.apk" "$build_dir/aligned.apk"
-echo "Built $build_dir/lite-launcher.apk ($(du -h "$build_dir/lite-launcher.apk" | cut -f1))"
+  --out "$build_dir/light-tv-launcher.apk" "$build_dir/aligned.apk"
+echo "Built $build_dir/light-tv-launcher.apk ($(du -h "$build_dir/light-tv-launcher.apk" | cut -f1))"
 
 if [[ "${1:-}" == "--install" ]]; then
+  # shellcheck source=lib/tv.sh
+  source "$(dirname "$0")/lib/tv.sh"
+  resolve_tv_addr
   echo "==> Installing on $TV_ADDR"
   # The TV rejects incremental installs; skip straight to a streamed install
-  adb -s "$TV_ADDR" install -r --no-incremental "$build_dir/lite-launcher.apk"
+  adb -s "$TV_ADDR" install -r --no-incremental "$build_dir/light-tv-launcher.apk"
   adb -s "$TV_ADDR" shell cmd package set-home-activity "$HOME_ACTIVITY" >/dev/null
   adb -s "$TV_ADDR" shell cmd role add-role-holder android.app.role.HOME "$PACKAGE_NAME" 0
   current_home="$(adb -s "$TV_ADDR" shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME | tail -1 | tr -d '\r')"
   if [[ "$current_home" == "$HOME_ACTIVITY" ]]; then
     adb -s "$TV_ADDR" shell input keyevent KEYCODE_HOME
-    echo "Lite Launcher is the default home screen"
+    echo "Light TV Launcher is the default home screen"
   else
     # The stock launcher's HOME filter has priority 2, which Android picks over any user
     # preference; third-party apps can't declare >0, so the stock one must be disabled
     echo "Installed, but '$current_home' still outranks it."
-    echo "Run scripts/debloat.sh apply to disable the stock launcher so Lite Launcher takes over."
+    echo "Run scripts/debloat.sh apply to disable the stock launcher so Light TV Launcher takes over."
   fi
 fi
